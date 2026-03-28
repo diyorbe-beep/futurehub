@@ -289,4 +289,121 @@
 
   // Auto-inject if inspector is already active
   window.parent.postMessage({ type: 'INSPECTOR_READY' }, '*');
+
+  /**
+   * Astro/Vite/SSR often render errors as HTML, not JS exceptions — WebContainer only forwards
+   * uncaught errors + console.error. We detect common dev error pages and emit a tagged console.error
+   * so the host can set actionAlert and trigger auto-fix.
+   */
+  (function setupPreviewBuildErrorDetection() {
+    var buildMarker = '__FUTUREHUB_PREVIEW_BUILD_ERROR__';
+    var reported = Object.create(null);
+    var reportedOrder = [];
+    var maxReported = 24;
+    var scanTimer = null;
+
+    function remember(fp) {
+      if (reported[fp]) {
+        return false;
+      }
+
+      reported[fp] = true;
+      reportedOrder.push(fp);
+
+      if (reportedOrder.length > maxReported) {
+        var old = reportedOrder.shift();
+        if (old) {
+          delete reported[old];
+        }
+      }
+
+      return true;
+    }
+
+    function report(details) {
+      if (!details || String(details).length < 24) {
+        return;
+      }
+
+      var fp = String(details).slice(0, 480);
+
+      if (!remember(fp)) {
+        return;
+      }
+
+      console.error(buildMarker, details);
+    }
+
+    function scan() {
+      try {
+        var t = document.title || '';
+        var body = '';
+
+        if (document.body && document.body.innerText) {
+          body = document.body.innerText;
+
+          if (body.length > 24000) {
+            body = body.slice(0, 24000);
+          }
+        }
+
+        // Astro: dynamic route without getStaticPaths (SSG), and similar
+        if (
+          /GetStaticPathsRequired|getStaticPaths\(\)\s+function\s+required|dynamic\s+routes?\s+must\s+define\s+getStaticPaths/i.test(
+            body,
+          )
+        ) {
+          report('Astro preview error (detected in page):\nTitle: ' + t + '\n\n' + body);
+
+          return;
+        }
+
+        if (/^\s*Error\s*$/i.test(t.trim()) && /astro|\.astro|getStaticPaths|vite|ssr/i.test(body)) {
+          report('Astro/dev error page:\nTitle: ' + t + '\n\n' + body.slice(0, 12000));
+
+          return;
+        }
+
+        // Vite error overlay (some versions)
+        if (document.querySelector('vite-error-overlay')) {
+          report('Vite error overlay:\nTitle: ' + t + '\n\n' + body.slice(0, 12000));
+
+          return;
+        }
+
+        // Next.js-style
+        if (/Unhandled Runtime Error|Application error:/i.test(body)) {
+          report('Framework runtime error page:\nTitle: ' + t + '\n\n' + body.slice(0, 12000));
+        }
+      } catch (e) {
+        /* ignore */
+      }
+    }
+
+    function scheduleScan() {
+      if (scanTimer) {
+        return;
+      }
+
+      scanTimer = setTimeout(function () {
+        scanTimer = null;
+        scan();
+      }, 400);
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', scheduleScan);
+    } else {
+      scheduleScan();
+    }
+
+    try {
+      var mo = new MutationObserver(scheduleScan);
+      mo.observe(document.documentElement, { childList: true, subtree: true, characterData: true });
+    } catch (e) {
+      /* ignore */
+    }
+
+    setInterval(scan, 3500);
+  })();
 })();

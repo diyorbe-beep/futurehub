@@ -2,16 +2,16 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { classNames } from '~/utils/classNames';
 
-// Predefined gradient colors
+// futureHub palette: teal #14b8a6, cyan, emerald
 const GRADIENT_COLORS = [
-  'from-purple-500/10 to-blue-500/5',
-  'from-blue-500/10 to-cyan-500/5',
-  'from-cyan-500/10 to-green-500/5',
-  'from-green-500/10 to-yellow-500/5',
-  'from-yellow-500/10 to-orange-500/5',
-  'from-orange-500/10 to-red-500/5',
-  'from-red-500/10 to-pink-500/5',
-  'from-pink-500/10 to-purple-500/5',
+  'from-teal-500/12 to-cyan-500/8',
+  'from-cyan-500/12 to-sky-500/8',
+  'from-emerald-500/10 to-teal-500/8',
+  'from-teal-400/12 to-cyan-600/8',
+  'from-cyan-400/10 to-emerald-500/8',
+  'from-teal-600/10 to-sky-500/8',
+  'from-sky-500/10 to-teal-500/8',
+  'from-teal-500/10 to-emerald-400/8',
 ];
 
 interface GradientCardProps {
@@ -72,7 +72,7 @@ export function GradientCard({
         'p-5 rounded-xl bg-gradient-to-br',
         gradientClass,
         borderEffect
-          ? 'border border-bolt-elements-borderColor dark:border-bolt-elements-borderColor-dark hover:border-purple-500/40'
+          ? 'border border-bolt-elements-borderColor dark:border-bolt-elements-borderColor-dark hover:border-teal-500/35'
           : '',
         'transition-all duration-300 shadow-sm',
         hoverEffect ? 'hover:shadow-md' : '',

@@ -19,6 +19,14 @@ export default defineConfig((config) => {
     build: {
       target: 'esnext',
     },
+    server: {
+      port: 3000,
+      host: 'localhost',
+      strictPort: true,
+      hmr: {
+        port: 3001,
+      },
+    },
     plugins: [
       nodePolyfills({
         include: ['buffer', 'process', 'util', 'stream'],

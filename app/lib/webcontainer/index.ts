@@ -38,9 +38,48 @@ if (!import.meta.env.SSR) {
         const inspectorScript = await response.text();
         await webcontainer.setPreviewScript(inspectorScript);
 
-        // Listen for preview errors
+        // Listen for preview errors (JS exceptions, unhandled rejections, console.error from preview script)
         webcontainer.on('preview-message', (message) => {
           console.log('WebContainer preview message:', message);
+
+          const buildErrorMarker = '__FUTUREHUB_PREVIEW_BUILD_ERROR__';
+
+          const isForwardedBuildError =
+            message.type === 'PREVIEW_CONSOLE_ERROR' &&
+            Array.isArray(message.args) &&
+            message.args.some(
+              (a) =>
+                typeof a === 'string' && (a.includes(buildErrorMarker) || a.includes('__BOLT_PREVIEW_BUILD_ERROR__')),
+            );
+
+          if (isForwardedBuildError) {
+            const textParts = message.args
+              .map((a) => {
+                if (typeof a === 'string') {
+                  return a;
+                }
+
+                try {
+                  return JSON.stringify(a);
+                } catch {
+                  return String(a);
+                }
+              })
+              .filter(
+                (s) =>
+                  s && !s.includes('__FUTUREHUB_PREVIEW_BUILD_ERROR__') && !s.includes('__BOLT_PREVIEW_BUILD_ERROR__'),
+              );
+            const body = textParts.join('\n').trim() || 'Build / dev server error in preview';
+            workbenchStore.actionAlert.set({
+              type: 'preview',
+              title: 'Preview build error',
+              description: body.slice(0, 240),
+              content: `Error at ${message.pathname}${message.search}${message.hash}\nPort: ${message.port}\n\n${body}\n\nConsole stack:\n${cleanStackTrace(message.stack || '')}`,
+              source: 'preview',
+            });
+
+            return;
+          }
 
           // Handle both uncaught exceptions and unhandled promise rejections
           if (message.type === 'PREVIEW_UNCAUGHT_EXCEPTION' || message.type === 'PREVIEW_UNHANDLED_REJECTION') {

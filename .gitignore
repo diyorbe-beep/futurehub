@@ -11,6 +11,29 @@ dist
 dist-ssr
 *.local
 
+# Vite / esbuild vaqtinchalik chiqishlari (repo ga kirmasligi kerak)
+vite.config.ts.timestamp-*.mjs
+vite.config.*.timestamp-*.mjs
+*.timestamp-*.mjs
+.vite/
+
+# TypeScript incremental
+*.tsbuildinfo
+tsconfig*.tsbuildinfo
+
+# Test / coverage
+coverage
+.nyc_output
+
+# OS
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Husky / lint cache (agar rootda bo‘lsa)
+.eslintcache
+.prettiercache
+
 .vscode/*
 .vscode/launch.json
 !.vscode/extensions.json
@@ -46,3 +69,6 @@ docs/instructions/Roadmap.md
 .cursorrules
 *.md
 .qodo
+
+# Autonomous agent cloned workspaces
+data/agent-workspaces

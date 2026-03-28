@@ -1,39 +1,34 @@
-import { AnimatePresence, cubicBezier, motion } from 'framer-motion';
+import { memo, type MouseEvent } from 'react';
 
 interface SendButtonProps {
   show: boolean;
   isStreaming?: boolean;
   disabled?: boolean;
-  onClick?: (event: React.MouseEvent<HTMLButtonElement, MouseEvent>) => void;
+  onClick?: (event: MouseEvent<HTMLButtonElement>) => void;
   onImagesSelected?: (images: File[]) => void;
 }
 
-const customEasingFn = cubicBezier(0.4, 0, 0.2, 1);
+export const SendButton = memo(({ show, isStreaming, disabled, onClick }: SendButtonProps) => {
+  if (!show) {
+    return null;
+  }
 
-export const SendButton = ({ show, isStreaming, disabled, onClick }: SendButtonProps) => {
   return (
-    <AnimatePresence>
-      {show ? (
-        <motion.button
-          className="absolute flex justify-center items-center top-[18px] right-[22px] p-1 bg-accent-500 hover:brightness-94 color-white rounded-md w-[34px] h-[34px] transition-theme disabled:opacity-50 disabled:cursor-not-allowed"
-          transition={{ ease: customEasingFn, duration: 0.17 }}
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: 10 }}
-          disabled={disabled}
-          onClick={(event) => {
-            event.preventDefault();
+    <button
+      type="button"
+      className="absolute flex justify-center items-center top-5 right-5 p-1.5 rounded-lg w-9 h-9 text-white bg-accent-500 hover:bg-accent-600 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 transition-[transform,background-color,opacity] duration-200 ease-out hover:scale-[1.02] active:scale-[0.98] will-change-transform shadow-sm"
+      disabled={disabled}
+      onClick={(event) => {
+        event.preventDefault();
 
-            if (!disabled) {
-              onClick?.(event);
-            }
-          }}
-        >
-          <div className="text-lg">
-            {!isStreaming ? <div className="i-ph:arrow-right"></div> : <div className="i-ph:stop-circle-bold"></div>}
-          </div>
-        </motion.button>
-      ) : null}
-    </AnimatePresence>
+        if (!disabled) {
+          onClick?.(event);
+        }
+      }}
+    >
+      <div className="text-lg">
+        {!isStreaming ? <div className="i-ph:arrow-right" /> : <div className="i-ph:stop-circle-bold" />}
+      </div>
+    </button>
   );
-};
+});

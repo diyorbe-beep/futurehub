@@ -29,7 +29,10 @@ export default class CerebrasProvider extends BaseProvider {
       name: 'gpt-oss-120b',
       label: 'GPT OSS 120B (Reasoning)',
       provider: 'Cerebras',
-      maxTokenAllowed: 8000,
+
+      // Cerebras public docs: ~131k context for this model (was incorrectly 8k and broke /api/llmcall + chat).
+      maxTokenAllowed: 131072,
+      maxCompletionTokens: 16384,
     },
     {
       name: 'qwen-3-235b-a22b-instruct-2507',
@@ -98,7 +101,7 @@ export default class CerebrasProvider extends BaseProvider {
             name: m.id,
             label: `${m.id} (Dynamic)`,
             provider: this.name,
-            maxTokenAllowed: 32000, // Default, Cerebras typically has good context
+            maxTokenAllowed: 131072, // Conservative default for unknown Cerebras public models
           })) || [];
 
       return dynamicModels;

@@ -15,6 +15,10 @@ import {
   updateContextOptimization,
   updateEventLogs,
   updatePromptId,
+  isDeveloperAgentMode,
+  developerAutonomousLoopStore,
+  updateDeveloperAgentMode,
+  updateDeveloperAutonomousLoop,
 } from '~/lib/stores/settings';
 import { useCallback, useEffect, useState } from 'react';
 import Cookies from 'js-cookie';
@@ -59,6 +63,11 @@ export interface UseSettingsReturn {
   contextOptimizationEnabled: boolean;
   enableContextOptimization: (enabled: boolean) => void;
 
+  developerAgentMode: boolean;
+  setDeveloperAgentMode: (enabled: boolean) => void;
+  developerAutonomousLoop: boolean;
+  setDeveloperAutonomousLoop: (enabled: boolean) => void;
+
   // Tab configuration
   tabConfiguration: TabWindowConfig;
   resetTabConfiguration: () => void;
@@ -78,6 +87,8 @@ export function useSettings(): UseSettingsReturn {
   const autoSelectTemplate = useStore(autoSelectStarterTemplate);
   const [activeProviders, setActiveProviders] = useState<ProviderInfo[]>([]);
   const contextOptimizationEnabled = useStore(enableContextOptimizationStore);
+  const developerAgentMode = useStore(isDeveloperAgentMode);
+  const developerAutonomousLoop = useStore(developerAutonomousLoopStore);
   const tabConfiguration = useStore(tabConfigurationStore);
   const [settings, setSettings] = useState<Settings>(() => {
     const storedSettings = getLocalStorage('settings');
@@ -143,6 +154,16 @@ export function useSettings(): UseSettingsReturn {
     logStore.logSystem(`Context optimization ${enabled ? 'enabled' : 'disabled'}`);
   }, []);
 
+  const setDeveloperAgentMode = useCallback((enabled: boolean) => {
+    updateDeveloperAgentMode(enabled);
+    logStore.logSystem(`AI Developer mode ${enabled ? 'enabled' : 'disabled'}`);
+  }, []);
+
+  const setDeveloperAutonomousLoop = useCallback((enabled: boolean) => {
+    updateDeveloperAutonomousLoop(enabled);
+    logStore.logSystem(`Autonomous developer loop ${enabled ? 'enabled' : 'disabled'}`);
+  }, []);
+
   const setTheme = useCallback(
     (theme: Settings['theme']) => {
       saveSettings({ theme });
@@ -197,6 +218,10 @@ export function useSettings(): UseSettingsReturn {
     setAutoSelectTemplate,
     contextOptimizationEnabled,
     enableContextOptimization,
+    developerAgentMode,
+    setDeveloperAgentMode,
+    developerAutonomousLoop,
+    setDeveloperAutonomousLoop,
     setTheme,
     setLanguage,
     setNotifications,

@@ -117,6 +117,10 @@ export default function FeaturesTab() {
     setEventLogs,
     setPromptId,
     promptId,
+    developerAgentMode,
+    setDeveloperAgentMode,
+    developerAutonomousLoop,
+    setDeveloperAutonomousLoop,
   } = useSettings();
 
   // Enable features by default on first load
@@ -170,11 +174,30 @@ export default function FeaturesTab() {
           break;
         }
 
+        case 'developerAgentMode': {
+          setDeveloperAgentMode(enabled);
+          toast.success(`AI Developer mode ${enabled ? 'enabled' : 'disabled'}`);
+          break;
+        }
+
+        case 'developerAutonomousLoop': {
+          setDeveloperAutonomousLoop(enabled);
+          toast.success(`Autonomous continuation ${enabled ? 'enabled' : 'disabled'}`);
+          break;
+        }
+
         default:
           break;
       }
     },
-    [enableLatestBranch, setAutoSelectTemplate, enableContextOptimization, setEventLogs],
+    [
+      enableLatestBranch,
+      setAutoSelectTemplate,
+      enableContextOptimization,
+      setEventLogs,
+      setDeveloperAgentMode,
+      setDeveloperAutonomousLoop,
+    ],
   );
 
   const features = {
@@ -210,6 +233,28 @@ export default function FeaturesTab() {
         icon: 'i-ph:list-bullets',
         enabled: eventLogs,
         tooltip: 'Enabled by default to record detailed logs of system events and user actions',
+      },
+      {
+        id: 'developerAgentMode',
+        title: 'AI Developer mode',
+        description:
+          'System prompt upgraded for autonomous engineering: plan, verify, fix, deploy-aware behavior (WebContainer-aware)',
+        icon: 'i-ph:rocket-launch',
+        enabled: developerAgentMode,
+        beta: true,
+        tooltip:
+          'Uses extra tokens. Combine with “Autonomous continuation” for multi-step background runs in Build mode.',
+      },
+      {
+        id: 'developerAutonomousLoop',
+        title: 'Autonomous continuation',
+        description:
+          'After each assistant reply in Build mode, automatically sends the next developer step until done or max steps (no user reply needed)',
+        icon: 'i-ph:arrows-clockwise',
+        enabled: developerAutonomousLoop,
+        experimental: true,
+        tooltip:
+          'Uses more API calls. Stops when the model outputs <developer_agent_status done="true" /> or max steps.',
       },
     ],
     beta: [],

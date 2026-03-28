@@ -30,7 +30,7 @@ export default function LlmErrorAlert({ alert, clearAlert }: Props) {
       case 'rate_limit':
         return `Rate limit exceeded for ${provider}. Please wait before retrying.`;
       case 'quota':
-        return `Quota exceeded for ${provider}. Please check your account limits.`;
+        return `Your ${provider} account needs credits or a higher plan. Add billing/credits in the provider's dashboard, or switch to another provider in the model settings.`;
       default:
         return 'An error occurred while processing your request.';
     }

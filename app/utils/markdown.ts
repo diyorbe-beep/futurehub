@@ -2,8 +2,8 @@ import rehypeRaw from 'rehype-raw';
 import remarkGfm from 'remark-gfm';
 import type { PluggableList, Plugin } from 'unified';
 import rehypeSanitize, { defaultSchema, type Options as RehypeSanitizeOptions } from 'rehype-sanitize';
+import type { Root, Text } from 'mdast';
 import { SKIP, visit } from 'unist-util-visit';
-import type { UnistNode, UnistParent } from 'node_modules/unist-util-visit/lib';
 
 export const allowedHTMLElements = [
   'a',
@@ -129,7 +129,7 @@ const limitedMarkdownPlugin: Plugin = () => {
   return (tree, file) => {
     const contents = file.toString();
 
-    visit(tree, (node: UnistNode, index, parent: UnistParent) => {
+    visit(tree as Root, (node, index, parent) => {
       if (
         index == null ||
         ['paragraph', 'text', 'inlineCode', 'code', 'strong', 'emphasis'].includes(node.type) ||
@@ -144,10 +144,14 @@ const limitedMarkdownPlugin: Plugin = () => {
         value = `\n${value}`;
       }
 
+      if (parent == null) {
+        return true;
+      }
+
       parent.children[index] = {
         type: 'text',
         value,
-      } as any;
+      } as Text;
 
       return [SKIP, index] as const;
     });

@@ -1,5 +1,5 @@
 appId: com.stackblitz.bolt.diy
-productName: Bolt Local
+productName: futureHub
 directories:
   buildResources: build
   output: dist

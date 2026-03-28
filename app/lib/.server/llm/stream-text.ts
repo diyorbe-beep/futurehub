@@ -1,5 +1,5 @@
 import { convertToCoreMessages, streamText as _streamText, type Message } from 'ai';
-import { MAX_TOKENS, PROVIDER_COMPLETION_LIMITS, isReasoningModel, type FileMap } from './constants';
+import { MAX_TOKENS, getEffectiveCompletionTokenLimit, isReasoningModel, type FileMap } from './constants';
 import { getSystemPrompt } from '~/lib/common/prompts/prompts';
 import { DEFAULT_MODEL, DEFAULT_PROVIDER, MODIFICATIONS_TAG_NAME, PROVIDER_LIST, WORK_DIR } from '~/utils/constants';
 import type { IProviderSetting } from '~/types/model';
@@ -9,6 +9,7 @@ import { LLMManager } from '~/lib/modules/llm/manager';
 import { createScopedLogger } from '~/utils/logger';
 import { createFilesContext, extractPropertiesFromMessage } from './utils';
 import { discussPrompt } from '~/lib/common/prompts/discuss-prompt';
+import { getDeveloperAgentAppendix } from '~/lib/common/prompts/developer-agent-appendix';
 import type { DesignScheme } from '~/types/design-scheme';
 
 export type Messages = Message[];
@@ -25,23 +26,6 @@ export interface StreamingOptions extends Omit<Parameters<typeof _streamText>[0]
 }
 
 const logger = createScopedLogger('stream-text');
-
-function getCompletionTokenLimit(modelDetails: any): number {
-  // 1. If model specifies completion tokens, use that
-  if (modelDetails.maxCompletionTokens && modelDetails.maxCompletionTokens > 0) {
-    return modelDetails.maxCompletionTokens;
-  }
-
-  // 2. Use provider-specific default
-  const providerDefault = PROVIDER_COMPLETION_LIMITS[modelDetails.provider];
-
-  if (providerDefault) {
-    return providerDefault;
-  }
-
-  // 3. Final fallback to MAX_TOKENS, but cap at reasonable limit for safety
-  return Math.min(MAX_TOKENS, 16384);
-}
 
 function sanitizeText(text: string): string {
   let sanitized = text.replace(/<div class=\\"__boltThought__\\">.*?<\/div>/s, '');
@@ -65,6 +49,12 @@ export async function streamText(props: {
   messageSliceId?: number;
   chatMode?: 'discuss' | 'build';
   designScheme?: DesignScheme;
+
+  /** Injects autonomous AI developer instructions (Features → AI Developer mode). */
+  developerAgentMode?: boolean;
+
+  /** Client-persisted memory snippet (preferences, notes, past decisions). */
+  agentMemoryContext?: string;
 }) {
   const {
     messages,
@@ -79,6 +69,8 @@ export async function streamText(props: {
     summary,
     chatMode,
     designScheme,
+    developerAgentMode,
+    agentMemoryContext,
   } = props;
   let currentModel = DEFAULT_MODEL;
   let currentProvider = DEFAULT_PROVIDER.name;
@@ -140,7 +132,7 @@ export async function streamText(props: {
     }
   }
 
-  const dynamicMaxTokens = modelDetails ? getCompletionTokenLimit(modelDetails) : Math.min(MAX_TOKENS, 16384);
+  const dynamicMaxTokens = modelDetails ? getEffectiveCompletionTokenLimit(modelDetails) : Math.min(MAX_TOKENS, 16384);
 
   // Use model-specific limits directly - no artificial cap needed
   const safeMaxTokens = dynamicMaxTokens;
@@ -217,6 +209,22 @@ export async function streamText(props: {
     `;
   } else {
     console.log('No locked files found from any source for prompt.');
+  }
+
+  if (developerAgentMode && chatMode === 'build' && promptId !== 'developer') {
+    systemPrompt = `${systemPrompt}\n\n${getDeveloperAgentAppendix(WORK_DIR)}`;
+  }
+
+  const mem = agentMemoryContext?.trim();
+
+  if (mem && chatMode === 'build') {
+    systemPrompt = `${systemPrompt}
+
+    <agent_persisted_memory>
+    Use this as continuity across sessions; do not contradict without reason.
+    ${mem}
+    </agent_persisted_memory>
+    `;
   }
 
   logger.info(`Sending llm call to ${provider.name} with model ${modelDetails.name}`);

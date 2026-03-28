@@ -3,7 +3,7 @@ import { streamText } from '~/lib/.server/llm/stream-text';
 import type { IProviderSetting, ProviderInfo } from '~/types/model';
 import { generateText } from 'ai';
 import { PROVIDER_LIST } from '~/utils/constants';
-import { MAX_TOKENS, PROVIDER_COMPLETION_LIMITS, isReasoningModel } from '~/lib/.server/llm/constants';
+import { MAX_TOKENS, getEffectiveCompletionTokenLimit, isReasoningModel } from '~/lib/.server/llm/constants';
 import { LLMManager } from '~/lib/modules/llm/manager';
 import type { ModelInfo } from '~/lib/modules/llm/types';
 import { getApiKeysFromCookie, getProviderSettingsFromCookie } from '~/lib/api/cookies';
@@ -24,44 +24,71 @@ async function getModelList(options: {
 
 const logger = createScopedLogger('api.llmcall');
 
-function getCompletionTokenLimit(modelDetails: ModelInfo): number {
-  // 1. If model specifies completion tokens, use that
-  if (modelDetails.maxCompletionTokens && modelDetails.maxCompletionTokens > 0) {
-    return modelDetails.maxCompletionTokens;
-  }
+/** Mirrors client `LlmErrorAlertType['errorType']` for JSON responses */
+type LlmErrorAlertErrorType = 'authentication' | 'rate_limit' | 'quota' | 'network' | 'unknown';
 
-  // 2. Use provider-specific default
-  const providerDefault = PROVIDER_COMPLETION_LIMITS[modelDetails.provider];
-
-  if (providerDefault) {
-    return providerDefault;
-  }
-
-  // 3. Final fallback to MAX_TOKENS, but cap at reasonable limit for safety
-  return Math.min(MAX_TOKENS, 16384);
+function stripLlmErrorPrefix(message: string): string {
+  return message.replace(/^(Custom error:\s*)/i, '').trim();
 }
 
-function validateTokenLimits(modelDetails: ModelInfo, requestedTokens: number): { valid: boolean; error?: string } {
-  const modelMaxTokens = modelDetails.maxTokenAllowed || 128000;
-  const maxCompletionTokens = getCompletionTokenLimit(modelDetails);
+function isBillingOrCreditsError(message: string): boolean {
+  const m = message.toLowerCase();
+  return (
+    m.includes('credit balance') ||
+    m.includes('billing') ||
+    m.includes('purchase credits') ||
+    m.includes('insufficient credits') ||
+    m.includes('payment required') ||
+    m.includes('plans & billing') ||
+    (m.includes('exceeded your') && m.includes('usage'))
+  );
+}
 
-  // Check against model's context window
-  if (requestedTokens > modelMaxTokens) {
-    return {
-      valid: false,
-      error: `Requested tokens (${requestedTokens}) exceed model's context window (${modelMaxTokens}). Please reduce your request size.`,
-    };
+function jsonErrorResponse(
+  message: string,
+  status: number,
+  extras?: { provider?: string; isRetryable?: boolean; errorType?: LlmErrorAlertErrorType },
+) {
+  const body: Record<string, unknown> = {
+    error: true,
+    message: stripLlmErrorPrefix(message),
+    statusCode: status,
+    isRetryable: extras?.isRetryable ?? status >= 500,
+    provider: extras?.provider ?? 'unknown',
+  };
+
+  if (extras?.errorType) {
+    body.errorType = extras.errorType;
   }
 
-  // Check against completion token limits
-  if (requestedTokens > maxCompletionTokens) {
-    return {
-      valid: false,
-      error: `Requested tokens (${requestedTokens}) exceed model's completion limit (${maxCompletionTokens}). Consider using a model with higher token limits.`,
-    };
+  return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
+}
+
+/** Merge Node `process.env` with Cloudflare bindings so local `remix vite:dev` sees `.env` secrets. */
+function resolveServerEnv(context: ActionFunctionArgs['context']): Record<string, string> {
+  const out: Record<string, string> = {};
+
+  if (typeof process !== 'undefined' && process.env) {
+    for (const key of Object.keys(process.env)) {
+      const v = process.env[key];
+
+      if (v != null && v !== '') {
+        out[key] = v;
+      }
+    }
   }
 
-  return { valid: true };
+  const cf = context.cloudflare?.env as unknown as Record<string, unknown> | undefined;
+
+  if (cf && typeof cf === 'object') {
+    for (const [key, value] of Object.entries(cf)) {
+      if (value != null && value !== '') {
+        out[key] = String(value);
+      }
+    }
+  }
+
+  return out;
 }
 
 async function llmCallAction({ context, request }: ActionFunctionArgs) {
@@ -77,22 +104,17 @@ async function llmCallAction({ context, request }: ActionFunctionArgs) {
 
   // validate 'model' and 'provider' fields
   if (!model || typeof model !== 'string') {
-    throw new Response('Invalid or missing model', {
-      status: 400,
-      statusText: 'Bad Request',
-    });
+    return jsonErrorResponse('Invalid or missing model', 400, { isRetryable: false });
   }
 
   if (!providerName || typeof providerName !== 'string') {
-    throw new Response('Invalid or missing provider', {
-      status: 400,
-      statusText: 'Bad Request',
-    });
+    return jsonErrorResponse('Invalid or missing provider', 400, { isRetryable: false });
   }
 
   const cookieHeader = request.headers.get('Cookie');
   const apiKeys = getApiKeysFromCookie(cookieHeader);
   const providerSettings = getProviderSettingsFromCookie(cookieHeader);
+  const serverEnv = resolveServerEnv(context);
 
   if (streamOutput) {
     try {
@@ -106,7 +128,7 @@ async function llmCallAction({ context, request }: ActionFunctionArgs) {
             content: `${message}`,
           },
         ],
-        env: context.cloudflare?.env as any,
+        env: serverEnv as any,
         apiKeys,
         providerSettings,
       });
@@ -118,12 +140,24 @@ async function llmCallAction({ context, request }: ActionFunctionArgs) {
         },
       });
     } catch (error: unknown) {
+      if (error instanceof Response) {
+        return error;
+      }
+
       console.log(error);
 
       if (error instanceof Error && error.message?.includes('API key')) {
-        throw new Response('Invalid or missing API key', {
-          status: 401,
-          statusText: 'Unauthorized',
+        return jsonErrorResponse('Invalid or missing API key', 401, {
+          provider: providerName,
+          isRetryable: false,
+        });
+      }
+
+      if (error instanceof Error && isBillingOrCreditsError(error.message)) {
+        return jsonErrorResponse(error.message, 402, {
+          provider: providerName,
+          isRetryable: false,
+          errorType: 'quota',
         });
       }
 
@@ -135,45 +169,41 @@ async function llmCallAction({ context, request }: ActionFunctionArgs) {
           error.message?.includes('exceeds') ||
           error.message?.includes('maximum'))
       ) {
-        throw new Response(
+        return jsonErrorResponse(
           `Token limit error: ${error.message}. Try reducing your request size or using a model with higher token limits.`,
-          {
-            status: 400,
-            statusText: 'Token Limit Exceeded',
-          },
+          400,
+          { provider: providerName, isRetryable: false },
         );
       }
 
-      throw new Response(null, {
-        status: 500,
-        statusText: 'Internal Server Error',
+      return jsonErrorResponse(error instanceof Error ? error.message : 'Internal Server Error', 500, {
+        provider: providerName,
       });
     }
   } else {
     try {
-      const models = await getModelList({ apiKeys, providerSettings, serverEnv: context.cloudflare?.env as any });
+      const models = await getModelList({ apiKeys, providerSettings, serverEnv });
       const modelDetails = models.find((m: ModelInfo) => m.name === model);
 
       if (!modelDetails) {
-        throw new Error('Model not found');
+        return jsonErrorResponse(
+          `Model "${model}" not found for provider "${providerName}". Enable the provider in settings or pick a model from the list.`,
+          400,
+          { provider: providerName, isRetryable: false },
+        );
       }
 
-      const dynamicMaxTokens = modelDetails ? getCompletionTokenLimit(modelDetails) : Math.min(MAX_TOKENS, 16384);
-
-      // Validate token limits before making API request
-      const validation = validateTokenLimits(modelDetails, dynamicMaxTokens);
-
-      if (!validation.valid) {
-        throw new Response(validation.error, {
-          status: 400,
-          statusText: 'Token Limit Exceeded',
-        });
-      }
+      const dynamicMaxTokens = modelDetails
+        ? getEffectiveCompletionTokenLimit(modelDetails)
+        : Math.min(MAX_TOKENS, 16384);
 
       const providerInfo = PROVIDER_LIST.find((p) => p.name === provider.name);
 
       if (!providerInfo) {
-        throw new Error('Provider not found');
+        return jsonErrorResponse(`Provider "${providerName}" is not registered.`, 400, {
+          provider: providerName,
+          isRetryable: false,
+        });
       }
 
       logger.info(`Generating response Provider: ${provider.name}, Model: ${modelDetails.name}`);
@@ -196,7 +226,7 @@ async function llmCallAction({ context, request }: ActionFunctionArgs) {
         ],
         model: providerInfo.getModelInstance({
           model: modelDetails.name,
-          serverEnv: context.cloudflare?.env as any,
+          serverEnv: serverEnv as unknown as Env,
           apiKeys,
           providerSettings,
         }),
@@ -239,59 +269,48 @@ async function llmCallAction({ context, request }: ActionFunctionArgs) {
         },
       });
     } catch (error: unknown) {
+      if (error instanceof Response) {
+        return error;
+      }
+
       console.log(error);
 
-      const errorResponse = {
-        error: true,
-        message: error instanceof Error ? error.message : 'An unexpected error occurred',
-        statusCode: (error as any).statusCode || 500,
-        isRetryable: (error as any).isRetryable !== false,
-        provider: (error as any).provider || 'unknown',
-      };
+      const rawMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
 
-      if (error instanceof Error && error.message?.includes('API key')) {
-        return new Response(
-          JSON.stringify({
-            ...errorResponse,
-            message: 'Invalid or missing API key',
-            statusCode: 401,
-            isRetryable: false,
-          }),
-          {
-            status: 401,
-            headers: { 'Content-Type': 'application/json' },
-            statusText: 'Unauthorized',
-          },
-        );
+      if (error instanceof Error && rawMessage.includes('API key')) {
+        return jsonErrorResponse('Invalid or missing API key', 401, {
+          provider: providerName,
+          isRetryable: false,
+        });
       }
 
-      // Handle token limit errors with helpful messages
+      if (error instanceof Error && isBillingOrCreditsError(rawMessage)) {
+        return jsonErrorResponse(rawMessage, 402, {
+          provider: providerName,
+          isRetryable: false,
+          errorType: 'quota',
+        });
+      }
+
       if (
         error instanceof Error &&
-        (error.message?.includes('max_tokens') ||
-          error.message?.includes('token') ||
-          error.message?.includes('exceeds') ||
-          error.message?.includes('maximum'))
+        (rawMessage.includes('max_tokens') ||
+          rawMessage.includes('token') ||
+          rawMessage.includes('exceeds') ||
+          rawMessage.includes('maximum'))
       ) {
-        return new Response(
-          JSON.stringify({
-            ...errorResponse,
-            message: `Token limit error: ${error.message}. Try reducing your request size or using a model with higher token limits.`,
-            statusCode: 400,
-            isRetryable: false,
-          }),
-          {
-            status: 400,
-            headers: { 'Content-Type': 'application/json' },
-            statusText: 'Token Limit Exceeded',
-          },
+        return jsonErrorResponse(
+          `Token limit error: ${rawMessage}. Try reducing your request size or using a model with higher token limits.`,
+          400,
+          { provider: providerName, isRetryable: false },
         );
       }
 
-      return new Response(JSON.stringify(errorResponse), {
-        status: errorResponse.statusCode,
-        headers: { 'Content-Type': 'application/json' },
-        statusText: 'Error',
+      const statusCode = typeof (error as any).statusCode === 'number' ? (error as any).statusCode : 500;
+
+      return jsonErrorResponse(stripLlmErrorPrefix(rawMessage), statusCode, {
+        provider: providerName,
+        isRetryable: statusCode >= 500,
       });
     }
   }

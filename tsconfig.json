@@ -27,6 +27,7 @@
     // vite takes care of building everything, not tsc
     "noEmit": true
   },
+  "exclude": ["node_modules", "server/agent-platform"],
   "include": [
     "**/*.ts",
     "**/*.tsx",

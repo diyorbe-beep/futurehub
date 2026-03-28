@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { ClientOnly } from 'remix-utils/client-only';
 import { classNames } from '~/utils/classNames';
 import { PROVIDER_LIST } from '~/utils/constants';
@@ -9,11 +9,11 @@ import FilePreview from './FilePreview';
 import { ScreenshotStateManager } from './ScreenshotStateManager';
 import { SendButton } from './SendButton.client';
 import { IconButton } from '~/components/ui/IconButton';
+import { SkeletonPulse } from '~/components/ui/SkeletonPulse';
 import { toast } from 'react-toastify';
 import { SpeechRecognitionButton } from '~/components/chat/SpeechRecognition';
 import { SupabaseConnection } from './SupabaseConnection';
 import { ExpoQrModal } from '~/components/workbench/ExpoQrModal';
-import styles from './BaseChat.module.scss';
 import type { ProviderInfo } from '~/types/model';
 import { ColorSchemeDialog } from '~/components/ui/ColorSchemeDialog';
 import type { DesignScheme } from '~/types/design-scheme';
@@ -54,6 +54,8 @@ interface ChatBoxProps {
   setImageDataList?: ((dataList: string[]) => void) | undefined;
   handleInputChange?: ((event: React.ChangeEvent<HTMLTextAreaElement>) => void) | undefined;
   handleStop?: (() => void) | undefined;
+  streamPaused?: boolean;
+  onToggleStreamPause?: () => void;
   enhancingPrompt?: boolean | undefined;
   enhancePrompt?: (() => void) | undefined;
   onWebSearchResult?: (result: string) => void;
@@ -65,49 +67,23 @@ interface ChatBoxProps {
   setSelectedElement?: ((element: ElementInfo | null) => void) | undefined;
 }
 
-export const ChatBox: React.FC<ChatBoxProps> = (props) => {
+const ChatBoxImpl: React.FC<ChatBoxProps> = (props) => {
   return (
     <div
       className={classNames(
-        'relative bg-bolt-elements-background-depth-2 backdrop-blur p-3 rounded-lg border border-bolt-elements-borderColor relative w-full max-w-chat mx-auto z-prompt',
-
-        /*
-         * {
-         *   'sticky bottom-2': chatStarted,
-         * },
-         */
+        'relative w-full max-w-chat mx-auto z-prompt',
+        'p-4 sm:p-5 rounded-2xl',
+        'border border-[var(--bolt-elements-glass-border)]',
+        'bg-[var(--bolt-elements-glass-bg)] backdrop-blur-[6px]',
+        'shadow-[0_4px_24px_-4px_rgba(0,0,0,0.35)]',
+        'transition-[box-shadow,border-color] duration-200 ease-out',
+        'focus-within:border-[rgba(20,184,166,0.4)] focus-within:shadow-[0_0_0_1px_rgba(20,184,166,0.22),0_8px_32px_-8px_rgba(20,184,166,0.12)]',
       )}
     >
-      <svg className={classNames(styles.PromptEffectContainer)}>
-        <defs>
-          <linearGradient
-            id="line-gradient"
-            x1="20%"
-            y1="0%"
-            x2="-14%"
-            y2="10%"
-            gradientUnits="userSpaceOnUse"
-            gradientTransform="rotate(-45)"
-          >
-            <stop offset="0%" stopColor="#b44aff" stopOpacity="0%"></stop>
-            <stop offset="40%" stopColor="#b44aff" stopOpacity="80%"></stop>
-            <stop offset="50%" stopColor="#b44aff" stopOpacity="80%"></stop>
-            <stop offset="100%" stopColor="#b44aff" stopOpacity="0%"></stop>
-          </linearGradient>
-          <linearGradient id="shine-gradient">
-            <stop offset="0%" stopColor="white" stopOpacity="0%"></stop>
-            <stop offset="40%" stopColor="#ffffff" stopOpacity="80%"></stop>
-            <stop offset="50%" stopColor="#ffffff" stopOpacity="80%"></stop>
-            <stop offset="100%" stopColor="white" stopOpacity="0%"></stop>
-          </linearGradient>
-        </defs>
-        <rect className={classNames(styles.PromptEffectLine)} pathLength="100" strokeLinecap="round"></rect>
-        <rect className={classNames(styles.PromptShine)} x="48" y="24" width="70" height="1"></rect>
-      </svg>
-      <div>
+      <div className="mb-1">
         <ClientOnly>
           {() => (
-            <div className={props.isModelSettingsCollapsed ? 'hidden' : ''}>
+            <div className={classNames(props.isModelSettingsCollapsed ? 'hidden' : '', 'space-y-2')}>
               <ModelSelector
                 key={props.provider?.name + ':' + props.modelList.length}
                 model={props.model}
@@ -169,30 +145,34 @@ export const ChatBox: React.FC<ChatBoxProps> = (props) => {
         </div>
       )}
       <div
-        className={classNames('relative shadow-xs border border-bolt-elements-borderColor backdrop-blur rounded-lg')}
+        className={classNames(
+          'relative rounded-xl border border-bolt-elements-borderColor/50',
+          'bg-bolt-elements-background-depth-2/50',
+        )}
       >
         <textarea
           ref={props.textareaRef}
           className={classNames(
-            'w-full pl-4 pt-4 pr-16 outline-none resize-none text-bolt-elements-textPrimary placeholder-bolt-elements-textTertiary bg-transparent text-sm',
-            'transition-all duration-200',
-            'hover:border-bolt-elements-focus',
+            'w-full pl-5 pt-5 pr-24 pb-4 outline-none resize-none rounded-xl',
+            'text-bolt-elements-textPrimary placeholder:text-bolt-elements-textTertiary bg-transparent',
+            'text-[15px] sm:text-base leading-relaxed',
+            'transition-colors duration-150 ease-out',
           )}
           onDragEnter={(e) => {
             e.preventDefault();
-            e.currentTarget.style.border = '2px solid #1488fc';
+            e.currentTarget.style.boxShadow = 'inset 0 0 0 1px rgba(20,184,166,0.45)';
           }}
           onDragOver={(e) => {
             e.preventDefault();
-            e.currentTarget.style.border = '2px solid #1488fc';
+            e.currentTarget.style.boxShadow = 'inset 0 0 0 1px rgba(20,184,166,0.45)';
           }}
           onDragLeave={(e) => {
             e.preventDefault();
-            e.currentTarget.style.border = '1px solid var(--bolt-elements-borderColor)';
+            e.currentTarget.style.boxShadow = 'none';
           }}
           onDrop={(e) => {
             e.preventDefault();
-            e.currentTarget.style.border = '1px solid var(--bolt-elements-borderColor)';
+            e.currentTarget.style.boxShadow = 'none';
 
             const files = Array.from(e.dataTransfer.files);
             files.forEach((file) => {
@@ -238,29 +218,52 @@ export const ChatBox: React.FC<ChatBoxProps> = (props) => {
             minHeight: props.TEXTAREA_MIN_HEIGHT,
             maxHeight: props.TEXTAREA_MAX_HEIGHT,
           }}
-          placeholder={props.chatMode === 'build' ? 'How can Bolt help you today?' : 'What would you like to discuss?'}
+          placeholder={
+            props.chatMode === 'build' ? 'How can futureHub help you today?' : 'What would you like to discuss?'
+          }
           translate="no"
         />
         <ClientOnly>
           {() => (
-            <SendButton
-              show={props.input.length > 0 || props.isStreaming || props.uploadedFiles.length > 0}
-              isStreaming={props.isStreaming}
-              disabled={!props.providerList || props.providerList.length === 0}
-              onClick={(event) => {
-                if (props.isStreaming) {
-                  props.handleStop?.();
-                  return;
-                }
+            <>
+              {props.isStreaming && (
+                <IconButton
+                  title={props.streamPaused ? 'Resume generation' : 'Pause generation'}
+                  className={classNames(
+                    'absolute top-5 right-[4.25rem] p-1.5 rounded-lg w-9 h-9 transition-theme',
+                    'bg-bolt-elements-background-depth-3/80 hover:bg-bolt-elements-background-depth-4',
+                    'border border-bolt-elements-borderColor text-bolt-elements-textPrimary',
+                    'hover:scale-[1.02] active:scale-[0.98] transition-transform duration-200 ease-out',
+                  )}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    props.onToggleStreamPause?.();
+                  }}
+                >
+                  <div
+                    className={classNames('text-lg mx-auto', props.streamPaused ? 'i-ph:play-fill' : 'i-ph:pause-fill')}
+                  />
+                </IconButton>
+              )}
+              <SendButton
+                show={props.input.length > 0 || props.isStreaming || props.uploadedFiles.length > 0}
+                isStreaming={props.isStreaming}
+                disabled={!props.providerList || props.providerList.length === 0}
+                onClick={(event) => {
+                  if (props.isStreaming) {
+                    props.handleStop?.();
+                    return;
+                  }
 
-                if (props.input.length > 0 || props.uploadedFiles.length > 0) {
-                  props.handleSendMessage?.(event);
-                }
-              }}
-            />
+                  if (props.input.length > 0 || props.uploadedFiles.length > 0) {
+                    props.handleSendMessage?.(event);
+                  }
+                }}
+              />
+            </>
           )}
         </ClientOnly>
-        <div className="flex justify-between items-center text-sm p-4 pt-2">
+        <div className="flex justify-between items-center text-sm px-1 pt-4 pb-1">
           <div className="flex gap-1 items-center">
             <ColorSchemeDialog designScheme={props.designScheme} setDesignScheme={props.setDesignScheme} />
             <McpTools />
@@ -278,9 +281,9 @@ export const ChatBox: React.FC<ChatBoxProps> = (props) => {
               }}
             >
               {props.enhancingPrompt ? (
-                <div className="i-svg-spinners:90-ring-with-bg text-bolt-elements-loader-progress text-xl animate-spin"></div>
+                <SkeletonPulse className="w-5 h-5" />
               ) : (
-                <div className="i-bolt:stars text-xl"></div>
+                <div className="i-bolt:stars text-xl transition-transform duration-200 hover:scale-[1.02]" />
               )}
             </IconButton>
 
@@ -335,3 +338,5 @@ export const ChatBox: React.FC<ChatBoxProps> = (props) => {
     </div>
   );
 };
+
+export const ChatBox = memo(ChatBoxImpl);

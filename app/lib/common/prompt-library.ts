@@ -1,6 +1,7 @@
 import { getSystemPrompt } from './prompts/prompts';
 import optimized from './prompts/optimized';
 import { getFineTunedPrompt } from './prompts/new-prompt';
+import { getDeveloperAgentAppendix } from './prompts/developer-agent-appendix';
 import type { DesignScheme } from '~/types/design-scheme';
 
 export interface PromptOptions {
@@ -41,6 +42,13 @@ export class PromptLibrary {
       label: 'Optimized Prompt (experimental)',
       description: 'An Experimental version of the prompt for lower token usage',
       get: (options) => optimized(options),
+    },
+    developer: {
+      label: 'AI Developer (autonomous)',
+      description:
+        'Autonomous engineer + DevOps mindset: goal→loop→fix→deploy-ready; pair with Features → AI Developer mode & Autonomous continuation',
+      get: (options) =>
+        `${getFineTunedPrompt(options.cwd, options.supabase, options.designScheme)}\n\n${getDeveloperAgentAppendix(options.cwd)}`,
     },
   };
   static getList() {

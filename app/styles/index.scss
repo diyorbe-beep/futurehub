@@ -7,21 +7,70 @@
 @use 'components/editor.scss';
 @use 'components/toast.scss';
 
+html {
+  height: 100%;
+  width: 100%;
+}
+
+html[data-theme='dark'] {
+  background: linear-gradient(165deg, #0b0f12 0%, #0f172a 52%, #0c1118 100%);
+  background-attachment: fixed;
+}
+
+html[data-theme='dark']::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(ellipse 75% 45% at 50% -8%, rgba(20, 184, 166, 0.06), transparent 58%);
+}
+
 html,
 body {
   height: 100%;
   width: 100%;
   background-color: var(--bolt-elements-bg-depth-1);
+  font-family:
+    'Inter',
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+html[data-theme='dark'] body {
+  background-color: transparent;
 }
 
 :root {
-  --gradient-opacity: 0.8;
-  --primary-color: rgba(158, 117, 240, var(--gradient-opacity));
-  --secondary-color: rgba(138, 43, 226, var(--gradient-opacity));
-  --accent-color: rgba(128, 59, 239, var(--gradient-opacity));
-  // --primary-color: rgba(147, 112, 219, var(--gradient-opacity));
-  // --secondary-color: rgba(138, 43, 226, var(--gradient-opacity));
-  // --accent-color: rgba(180, 170, 220, var(--gradient-opacity));
+  --gradient-opacity: 0.85;
+  /* futureHub: #14b8a6 + cyan / emerald for BackgroundRays */
+  --primary-color: rgba(20, 184, 166, var(--gradient-opacity));
+  --secondary-color: rgba(6, 182, 212, var(--gradient-opacity));
+  --accent-color: rgba(16, 185, 129, var(--gradient-opacity));
+}
+
+@keyframes fh-fade-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 6px, 0);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.animate-fade-in {
+  animation: fh-fade-in 0.28s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+.animation-delay-200 {
+  animation-delay: 0.1s;
 }
 
 .modern-scrollbar {
@@ -43,7 +92,7 @@ body {
     border-radius: 9999px; // pill shape
     border: 2px solid transparent; // for padding-like effect
     background-clip: content-box;
-    transition: background-color 0.2s ease-in-out; // Add transition
+    transition: background-color 0.15s ease-out;
   }
 
   &::-webkit-scrollbar-thumb:hover {

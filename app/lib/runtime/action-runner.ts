@@ -302,7 +302,13 @@ export class ActionRunner {
     logger.debug(`${action.type} Shell Response: [exit code:${resp?.exitCode}]`);
 
     if (resp?.exitCode != 0) {
-      throw new ActionCommandError('Failed To Start Application', resp?.output || 'No Output Available');
+      const out = resp?.output || 'No Output Available';
+      const hint =
+        'Common fixes:\n' +
+        '1. In the Bolt terminal run: npm install\n' +
+        '2. Then: npm run dev (or the script in package.json "scripts")\n' +
+        '3. For Astro: ensure "dev": "astro dev" and dependencies include astro';
+      throw new ActionCommandError('Failed To Start Application', `${out}\n\n${hint}`);
     }
 
     return resp;

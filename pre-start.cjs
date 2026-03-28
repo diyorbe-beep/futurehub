@@ -1,10 +1,11 @@
 const { execSync } = require('child_process');
 
-// Get git hash with fallback
 const getGitHash = () => {
   try {
-    return execSync('git rev-parse --short HEAD').toString().trim();
-  } catch {
+    return execSync('git rev-parse --short HEAD', {
+      stdio: ['ignore', 'pipe', 'ignore'] // 💥 fix
+    }).toString().trim();
+  } catch (e) {
     return 'no-git-info';
   }
 };
@@ -21,6 +22,6 @@ console.log(`
 ★═══════════════════════════════════════★
 `);
 console.log('📍 Current Version Tag:', `v${commitJson.version}`);
-console.log('📍 Current Commit Version:', commitJson.hash);
+console.log('📍 Current Commit Version:', commitJson.hghostash);
 console.log('  Please wait until the URL appears here');
 console.log('★═══════════════════════════════════════★');

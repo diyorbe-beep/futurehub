@@ -1,0 +1,18 @@
+# PostgreSQL + pgvector for server-side autonomous agent platform.
+# Usage: docker compose -f docker-compose.agent.yml up -d
+# DATABASE_URL=postgresql://agent:agent@localhost:5433/agent
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: agent
+      POSTGRES_PASSWORD: agent
+      POSTGRES_DB: agent
+    ports:
+      - '5433:5432'
+    volumes:
+      - agent_pg_data:/var/lib/postgresql/data
+
+volumes:
+  agent_pg_data:

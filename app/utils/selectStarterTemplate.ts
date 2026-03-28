@@ -65,8 +65,12 @@ MOST IMPORTANT: YOU DONT HAVE TIME TO THINK JUST START RESPONDING BASED ON HUNCH
 
 const templates: Template[] = STARTER_TEMPLATES.filter((t) => !t.name.includes('shadcn'));
 
-const parseSelectedTemplate = (llmOutput: string): { template: string; title: string } | null => {
+const parseSelectedTemplate = (llmOutput: string | undefined | null): { template: string; title: string } | null => {
   try {
+    if (typeof llmOutput !== 'string') {
+      return null;
+    }
+
     // Extract content between <templateName> tags
     const templateNameMatch = llmOutput.match(/<templateName>(.*?)<\/templateName>/);
     const titleMatch = llmOutput.match(/<title>(.*?)<\/title>/);
@@ -92,12 +96,25 @@ export const selectStarterTemplate = async (options: { message: string; model: s
   };
   const response = await fetch('/api/llmcall', {
     method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(requestBody),
   });
-  const respJson: { text: string } = await response.json();
-  console.log(respJson);
 
-  const { text } = respJson;
+  const respJson = (await response.json()) as
+    | { text?: string }
+    | { error?: boolean; message?: string; statusCode?: number };
+
+  if (!response.ok || ('error' in respJson && respJson.error)) {
+    const msg =
+      'message' in respJson && typeof respJson.message === 'string'
+        ? respJson.message
+        : `LLM request failed (${response.status})`;
+    console.warn('[selectStarterTemplate]', msg, respJson);
+
+    return { template: 'blank', title: '' };
+  }
+
+  const text = 'text' in respJson && typeof respJson.text === 'string' ? respJson.text : undefined;
   const selectedTemplate = parseSelectedTemplate(text);
 
   if (selectedTemplate) {
@@ -184,7 +201,7 @@ export async function getTemplates(templateName: string, title?: string) {
   }
 
   const assistantMessage = `
-Bolt is initializing your project with the required files using the ${template.name} template.
+futureHub is initializing your project with the required files using the ${template.name} template.
 <boltArtifact id="imported-files" title="${title || 'Create initial files'}" type="bundled">
 ${filesToImport.files
   .map(

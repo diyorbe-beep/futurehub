@@ -50,20 +50,38 @@ export const Artifact = memo(({ artifactId }: ArtifactProps) => {
   };
 
   useEffect(() => {
+    if (!artifact) {
+      return;
+    }
+
     if (actions.length && !showActions && !userToggledActions.current) {
       setShowActions(true);
     }
 
-    if (actions.length !== 0 && artifact.type === 'bundled') {
-      const finished = !actions.find(
-        (action) => action.status !== 'complete' && !(action.type === 'start' && action.status === 'running'),
-      );
+    if (artifact.type === 'bundled') {
+      /*
+       * Empty bundled artifact (e.g. snapshot with no files): parser closes the artifact but no
+       * actions are registered — without this, "Creating initial files" spins forever.
+       */
+      if (artifact.closed && actions.length === 0) {
+        if (!allActionFinished) {
+          setAllActionFinished(true);
+        }
 
-      if (allActionFinished !== finished) {
-        setAllActionFinished(finished);
+        return;
+      }
+
+      if (actions.length !== 0) {
+        const finished = !actions.find(
+          (action) => action.status !== 'complete' && !(action.type === 'start' && action.status === 'running'),
+        );
+
+        if (allActionFinished !== finished) {
+          setAllActionFinished(finished);
+        }
       }
     }
-  }, [actions, artifact.type, allActionFinished]);
+  }, [actions, artifact, showActions, allActionFinished]);
 
   // Determine the dynamic title based on state for bundled artifacts
   const dynamicTitle =

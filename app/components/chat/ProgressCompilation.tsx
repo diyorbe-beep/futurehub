@@ -37,10 +37,10 @@ export default function ProgressCompilation({ data }: { data?: ProgressAnnotatio
     <AnimatePresence>
       <div
         className={classNames(
-          'bg-bolt-elements-background-depth-2',
+          'bg-bolt-elements-background-depth-2/90',
           'border border-bolt-elements-borderColor',
-          'shadow-lg rounded-lg  relative w-full max-w-chat mx-auto z-prompt',
-          'p-1',
+          'rounded-lg relative w-full max-w-chat mx-auto z-prompt',
+          'p-1 transition-colors duration-200',
         )}
       >
         <div

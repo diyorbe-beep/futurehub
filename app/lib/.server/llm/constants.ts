@@ -1,9 +1,14 @@
+import type { ModelInfo } from '~/lib/modules/llm/types';
+
 /*
  * Maximum tokens for response generation (updated for modern model capabilities)
  * This serves as a fallback when model-specific limits are unavailable
  * Modern models like Claude 3.5, GPT-4o, and Gemini Pro support 128k+ tokens
  */
 export const MAX_TOKENS = 128000;
+
+/** Headroom reserved for system + user prompt when capping completion vs context window */
+const CONTEXT_PROMPT_RESERVE = 4096;
 
 /*
  * Provider-specific default completion token limits
@@ -28,19 +33,45 @@ export const PROVIDER_COMPLETION_LIMITS: Record<string, number> = {
   OpenAILike: 8192,
   AmazonBedrock: 8192,
   Hyperbolic: 8192,
+  Cerebras: 8192,
 };
+
+/**
+ * Max completion tokens for one request: provider defaults, optional model overrides,
+ * then cap so completion + typical prompt fits in `maxTokenAllowed` (full context).
+ */
+export function getEffectiveCompletionTokenLimit(modelDetails: ModelInfo): number {
+  let limit: number;
+
+  if (modelDetails.maxCompletionTokens && modelDetails.maxCompletionTokens > 0) {
+    limit = modelDetails.maxCompletionTokens;
+  } else {
+    const providerDefault = PROVIDER_COMPLETION_LIMITS[modelDetails.provider];
+
+    if (providerDefault) {
+      limit = providerDefault;
+    } else {
+      limit = Math.min(MAX_TOKENS, 16384);
+    }
+  }
+
+  const ctx = modelDetails.maxTokenAllowed;
+
+  if (ctx && ctx > 0) {
+    const reserve = Math.min(CONTEXT_PROMPT_RESERVE, Math.ceil(ctx * 0.45));
+    const maxCompletionByContext = Math.max(256, ctx - reserve);
+    limit = Math.min(limit, maxCompletionByContext);
+  }
+
+  return Math.max(1, limit);
+}
 
 /*
  * Reasoning models that require maxCompletionTokens instead of maxTokens
  * These models use internal reasoning tokens and have different API parameter requirements
  */
 export function isReasoningModel(modelName: string): boolean {
-  const result = /^(o1|o3|gpt-5)/i.test(modelName);
-
-  // DEBUG: Test regex matching
-  console.log(`REGEX TEST: "${modelName}" matches reasoning pattern: ${result}`);
-
-  return result;
+  return /^(o1|o3|gpt-5)/i.test(modelName);
 }
 
 // limits the number of model responses that can be returned in a single request
