@@ -28,7 +28,7 @@
     "typecheck": "tsc",
     "typegen": "wrangler types",
     "preview": "pnpm run build && pnpm run start",
-    "prepare": "husky",
+    "prepare": "is-ci || husky",
     "agent:migrate": "tsx server/agent-platform/migrate.ts",
     "agent:server": "tsx server/agent-platform/main.ts",
     "clean": "node scripts/clean.js",
