@@ -11,8 +11,8 @@
     }
   ],
   "functions": {
-    "app/entry.server.tsx": {
-      "runtime": "edge"
+    "api/index.js": {
+      "runtime": "nodejs@20.x"
     }
   }
 }
