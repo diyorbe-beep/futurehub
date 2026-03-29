@@ -22,8 +22,7 @@ interface AssistantMessageProps {
   content: string;
   annotations?: JSONValue[];
   messageId?: string;
-  onRewind?: (messageId: string) => void;
-  onFork?: (messageId: string) => void;
+  onReload?: () => void;
   append?: (message: Message) => void;
   chatMode?: 'discuss' | 'build';
   setChatMode?: (mode: 'discuss' | 'build') => void;
@@ -63,9 +62,7 @@ export const AssistantMessage = memo(
   ({
     content,
     annotations,
-    messageId,
-    onRewind,
-    onFork,
+    onReload,
     append,
     chatMode,
     setChatMode,
@@ -151,26 +148,15 @@ export const AssistantMessage = memo(
                   Tokens: {usage.totalTokens} (prompt: {usage.promptTokens}, completion: {usage.completionTokens})
                 </div>
               )}
-              {(onRewind || onFork) && messageId && (
+              {onReload && (
                 <div className="flex gap-2 flex-col lg:flex-row ml-auto">
-                  {onRewind && (
-                    <WithTooltip tooltip="Revert to this message">
-                      <button
-                        onClick={() => onRewind(messageId)}
-                        key="i-ph:arrow-u-up-left"
-                        className="i-ph:arrow-u-up-left text-xl text-bolt-elements-textSecondary hover:text-bolt-elements-textPrimary transition-colors"
-                      />
-                    </WithTooltip>
-                  )}
-                  {onFork && (
-                    <WithTooltip tooltip="Fork chat from this message">
-                      <button
-                        onClick={() => onFork(messageId)}
-                        key="i-ph:git-fork"
-                        className="i-ph:git-fork text-xl text-bolt-elements-textSecondary hover:text-bolt-elements-textPrimary transition-colors"
-                      />
-                    </WithTooltip>
-                  )}
+                  <WithTooltip tooltip="Regenerate response">
+                    <button
+                      onClick={() => onReload()}
+                      key="i-ph:arrows-clockwise"
+                      className="i-ph:arrows-clockwise text-xl text-bolt-elements-textSecondary hover:text-bolt-elements-textPrimary transition-colors"
+                    />
+                  </WithTooltip>
                 </div>
               )}
             </div>

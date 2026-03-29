@@ -7,6 +7,7 @@ import React, { type RefCallback, useEffect, useState } from 'react';
 import { ClientOnly } from 'remix-utils/client-only';
 import { Menu } from '~/components/sidebar/Menu.client';
 import { Workbench } from '~/components/workbench/Workbench.client';
+import { workbenchStore } from '~/lib/stores/workbench';
 import { classNames } from '~/utils/classNames';
 import { PROVIDER_LIST } from '~/utils/constants';
 import { Messages } from './Messages.client';
@@ -37,7 +38,7 @@ import { DeveloperAgentBanner } from './DeveloperAgentBanner';
 import { AgentJobsPanel } from '~/components/agent/AgentJobsPanel';
 import { isDeveloperAgentMode } from '~/lib/stores/settings';
 
-const TEXTAREA_MIN_HEIGHT = 132;
+const TEXTAREA_MIN_HEIGHT = 64;
 
 interface BaseChatProps {
   textareaRef?: React.RefObject<HTMLTextAreaElement> | undefined;
@@ -87,6 +88,7 @@ interface BaseChatProps {
   setSelectedElement?: (element: ElementInfo | null) => void;
   addToolResult?: ({ toolCallId, result }: { toolCallId: string; result: any }) => void;
   onWebSearchResult?: (result: string) => void;
+  reload?: () => void;
 }
 
 export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
@@ -139,13 +141,14 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
         throw new Error('addToolResult not implemented');
       },
       onWebSearchResult,
+      reload,
     },
     ref,
   ) => {
     const TEXTAREA_MAX_HEIGHT = chatStarted ? 520 : 340;
     const [apiKeys, setApiKeys] = useState<Record<string, string>>(getApiKeysFromCookies());
     const [modelList, setModelList] = useState<ModelInfo[]>([]);
-    const [isModelSettingsCollapsed, setIsModelSettingsCollapsed] = useState(false);
+    const [isModelSettingsCollapsed, setIsModelSettingsCollapsed] = useState(true);
     const [isListening, setIsListening] = useState(false);
     const [recognition, setRecognition] = useState<SpeechRecognition | null>(null);
     const [transcript, setTranscript] = useState('');
@@ -356,20 +359,32 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
         data-chat-visible={showChat}
       >
         <ClientOnly>{() => <Menu />}</ClientOnly>
-        <div className="flex flex-col lg:flex-row overflow-y-auto w-full h-full">
-          <div className={classNames(styles.Chat, 'flex flex-col flex-grow lg:min-w-[var(--chat-min-width)] h-full')}>
+        <div className="flex flex-col lg:flex-row w-full h-full overflow-hidden relative">
+          <div
+            className={classNames(styles.Chat, 'flex flex-col h-full relative z-0')}
+            style={{
+              flex: 1,
+              minWidth: '300px',
+            }}
+          >
             {!chatStarted && (
-              <div id="intro" className="mt-[14vh] max-w-2xl mx-auto text-center px-4 lg:px-0">
-                <h1 className="text-3xl lg:text-5xl xl:text-6xl font-bold tracking-tight text-bolt-elements-textPrimary mb-4 animate-fade-in">
+              <div
+                id="intro"
+                className="mt-[18vh] w-full max-w-3xl mx-auto text-center px-4 lg:px-0 flex flex-col items-center"
+              >
+                <div className="w-16 h-16 mb-6 rounded-2xl bg-accent-500/10 flex items-center justify-center text-accent-500 ring-1 ring-accent-500/20 shadow-[0_0_32px_rgba(20,184,166,0.2)] animate-fade-in">
+                  <span className="i-ph:sparkle-fill text-3xl" />
+                </div>
+                <h1 className="text-4xl lg:text-5xl xl:text-[3.5rem] font-medium tracking-tight text-bolt-elements-textPrimary mb-5 animate-fade-in">
                   Where ideas begin
                 </h1>
-                <p className="text-base lg:text-lg text-bolt-elements-textSecondary max-w-lg mx-auto mb-8 animate-fade-in animation-delay-200 leading-relaxed">
+                <p className="text-base lg:text-lg text-bolt-elements-textSecondary max-w-xl mx-auto mb-8 animate-fade-in animation-delay-200 leading-[1.6]">
                   Bring ideas to life in seconds or get help on existing projects.
                 </p>
               </div>
             )}
             <StickToBottom
-              className={classNames('pt-6 px-2 sm:px-6 relative', {
+              className={classNames('pt-0 px-2 sm:px-6 relative', {
                 'h-full flex flex-col modern-scrollbar': chatStarted,
               })}
               resize="smooth"
@@ -380,7 +395,7 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                   {() => {
                     return chatStarted ? (
                       <Messages
-                        className="flex flex-col w-full flex-1 max-w-chat pb-4 mx-auto z-1"
+                        className="flex flex-col w-full flex-1 max-w-full px-4 lg:px-8 pb-4 mx-auto z-1"
                         messages={messages}
                         isStreaming={isStreaming && !streamPaused}
                         append={append}
@@ -389,6 +404,7 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                         provider={provider}
                         model={model}
                         addToolResult={addToolResult}
+                        reload={reload}
                       />
                     ) : null;
                   }}
@@ -396,9 +412,12 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                 <ScrollToBottom />
               </StickToBottom.Content>
               <div
-                className={classNames('my-auto flex flex-col gap-2 w-full max-w-chat mx-auto z-prompt mb-6', {
-                  'sticky bottom-2': chatStarted,
-                })}
+                className={classNames(
+                  'my-auto flex flex-col gap-2 w-full max-w-full px-4 lg:px-8 mx-auto z-prompt mb-6',
+                  {
+                    'sticky bottom-2': chatStarted,
+                  },
+                )}
               >
                 <div className="flex flex-col gap-2">
                   <DeveloperAgentBanner />

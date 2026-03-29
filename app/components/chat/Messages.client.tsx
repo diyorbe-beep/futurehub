@@ -3,10 +3,6 @@ import { Fragment } from 'react';
 import { classNames } from '~/utils/classNames';
 import { AssistantMessage } from './AssistantMessage';
 import { UserMessage } from './UserMessage';
-import { useLocation } from '@remix-run/react';
-import { db, chatId } from '~/lib/persistence/useChatHistory';
-import { forkChat } from '~/lib/persistence/db';
-import { toast } from 'react-toastify';
 import { forwardRef } from 'react';
 import type { ForwardedRef } from 'react';
 import type { ProviderInfo } from '~/types/model';
@@ -22,32 +18,12 @@ interface MessagesProps {
   model?: string;
   provider?: ProviderInfo;
   addToolResult: ({ toolCallId, result }: { toolCallId: string; result: any }) => void;
+  reload?: () => void;
 }
 
 export const Messages = forwardRef<HTMLDivElement, MessagesProps>(
   (props: MessagesProps, ref: ForwardedRef<HTMLDivElement> | undefined) => {
     const { id, isStreaming = false, messages = [] } = props;
-    const location = useLocation();
-
-    const handleRewind = (messageId: string) => {
-      const searchParams = new URLSearchParams(location.search);
-      searchParams.set('rewindTo', messageId);
-      window.location.search = searchParams.toString();
-    };
-
-    const handleFork = async (messageId: string) => {
-      try {
-        if (!db || !chatId.get()) {
-          toast.error('Chat persistence is not available');
-          return;
-        }
-
-        const urlId = await forkChat(db, chatId.get()!, messageId);
-        window.location.href = `/chat/${urlId}`;
-      } catch (error) {
-        toast.error('Failed to fork chat: ' + (error as Error).message);
-      }
-    };
 
     return (
       <div id={id} className={props.className} ref={ref}>
@@ -65,9 +41,10 @@ export const Messages = forwardRef<HTMLDivElement, MessagesProps>(
               return (
                 <div
                   key={index}
-                  className={classNames('flex gap-4 py-3 w-full rounded-lg', {
-                    'mt-4': !isFirst,
+                  className={classNames('flex gap-4 py-3 w-full rounded-lg animate-slide-up-fade', {
+                    'mt-6': !isFirst,
                   })}
+                  style={{ animationDelay: `${Math.min(index * 0.05, 0.2)}s`, animationFillMode: 'both' }}
                 >
                   <div className="grid grid-col-1 w-full">
                     {isUserMessage ? (
@@ -77,8 +54,7 @@ export const Messages = forwardRef<HTMLDivElement, MessagesProps>(
                         content={content}
                         annotations={message.annotations}
                         messageId={messageId}
-                        onRewind={handleRewind}
-                        onFork={handleFork}
+                        onReload={index === messages.length - 1 ? props.reload : undefined}
                         append={props.append}
                         chatMode={props.chatMode}
                         setChatMode={props.setChatMode}
@@ -94,7 +70,17 @@ export const Messages = forwardRef<HTMLDivElement, MessagesProps>(
             })
           : null}
         {isStreaming && (
-          <div className="text-center w-full  text-bolt-elements-item-contentAccent i-svg-spinners:3-dots-fade text-4xl mt-4"></div>
+          <div
+            className="flex justify-center items-center w-full mt-6 animate-slide-up-fade"
+            style={{ animationDelay: '0.1s' }}
+          >
+            <div className="flex items-center gap-2 bg-bolt-elements-background-depth-2/60 backdrop-blur-md px-4 py-2 rounded-full border border-bolt-elements-borderColor/50 shadow-[0_4px_16px_rgba(0,0,0,0.05)]">
+              <div className="i-svg-spinners:3-dots-fade text-2xl text-accent-500"></div>
+              <span className="text-[13px] font-medium text-bolt-elements-textSecondary tracking-wide">
+                Thinking...
+              </span>
+            </div>
+          </div>
         )}
       </div>
     );

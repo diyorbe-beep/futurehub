@@ -55,7 +55,7 @@ export function UserMessage({ content, parts }: UserMessageProps) {
             <div className="i-ph:user-fill text-accent-500 text-2xl" />
           )}
         </div>
-        <div className="flex flex-col gap-4 bg-accent-500/10 backdrop-blur-sm p-3 py-3 w-auto rounded-lg mr-auto">
+        <div className="flex flex-col gap-4 bg-accent-500/10 px-5 py-4 w-auto max-w-[85%] rounded-[24px] rounded-tl-[8px] mr-auto shadow-sm border border-accent-500/10">
           {textContent && <Markdown html>{textContent}</Markdown>}
           {images.map((item, index) => (
             <img
@@ -74,7 +74,7 @@ export function UserMessage({ content, parts }: UserMessageProps) {
   const textContent = stripMetadata(content);
 
   return (
-    <div className="flex flex-col bg-accent-500/10 backdrop-blur-sm px-5 p-3.5 w-auto rounded-lg ml-auto">
+    <div className="flex flex-col bg-accent-500/10 px-5 py-4 w-auto max-w-[85%] rounded-[24px] rounded-tr-[8px] ml-auto shadow-[0_2px_8px_rgba(0,0,0,0.05)] border border-accent-500/10 text-[15px] sm:text-[16px] leading-[1.6]">
       <div className="flex gap-3.5 mb-4">
         {images.map((item, index) => (
           <div className="relative flex rounded-lg border border-bolt-elements-borderColor overflow-hidden">

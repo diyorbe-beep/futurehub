@@ -16,7 +16,7 @@ export const SendButton = memo(({ show, isStreaming, disabled, onClick }: SendBu
   return (
     <button
       type="button"
-      className="absolute flex justify-center items-center top-5 right-5 p-1.5 rounded-lg w-9 h-9 text-white bg-accent-500 hover:bg-accent-600 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 transition-[transform,background-color,opacity] duration-200 ease-out hover:scale-[1.02] active:scale-[0.98] will-change-transform shadow-sm"
+      className="absolute flex justify-center items-center top-[22px] right-[22px] p-2 rounded-full w-10 h-10 text-white bg-accent-500 hover:bg-accent-600 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] hover:scale-[1.08] active:scale-[0.92] shadow-[0_4px_16px_rgba(20,184,166,0.3)] hover:shadow-[0_6px_20px_rgba(20,184,166,0.4)] disabled:shadow-none disabled:hover:scale-100 will-change-transform"
       disabled={disabled}
       onClick={(event) => {
         event.preventDefault();
@@ -26,8 +26,8 @@ export const SendButton = memo(({ show, isStreaming, disabled, onClick }: SendBu
         }
       }}
     >
-      <div className="text-lg">
-        {!isStreaming ? <div className="i-ph:arrow-right" /> : <div className="i-ph:stop-circle-bold" />}
+      <div className="text-xl">
+        {!isStreaming ? <div className="i-ph:arrow-up-bold" /> : <div className="i-ph:stop-circle-fill" />}
       </div>
     </button>
   );

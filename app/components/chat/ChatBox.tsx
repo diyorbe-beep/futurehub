@@ -71,13 +71,14 @@ const ChatBoxImpl: React.FC<ChatBoxProps> = (props) => {
   return (
     <div
       className={classNames(
-        'relative w-full max-w-chat mx-auto z-prompt',
-        'p-4 sm:p-5 rounded-2xl',
+        'relative w-full max-w-full mx-auto z-prompt',
+        'p-5 sm:p-6 rounded-[32px]',
         'border border-[var(--bolt-elements-glass-border)]',
-        'bg-[var(--bolt-elements-glass-bg)] backdrop-blur-[6px]',
-        'shadow-[0_4px_24px_-4px_rgba(0,0,0,0.35)]',
-        'transition-[box-shadow,border-color] duration-200 ease-out',
-        'focus-within:border-[rgba(20,184,166,0.4)] focus-within:shadow-[0_0_0_1px_rgba(20,184,166,0.22),0_8px_32px_-8px_rgba(20,184,166,0.12)]',
+        'bg-[var(--bolt-elements-bg-depth-2)]',
+        'shadow-[0_4px_24px_-8px_rgba(0,0,0,0.15)]',
+        'transition-[border-color,box-shadow,transform] duration-200 ease-out',
+        'hover:shadow-[0_8px_32px_-8px_rgba(0,0,0,0.2)]',
+        'focus-within:border-accent-500/50 focus-within:shadow-[0_0_0_1px_rgba(20,184,166,0.4),0_8px_32px_-8px_rgba(20,184,166,0.1)] focus-within:-translate-y-[1px]',
       )}
     >
       <div className="mb-1">
@@ -146,17 +147,18 @@ const ChatBoxImpl: React.FC<ChatBoxProps> = (props) => {
       )}
       <div
         className={classNames(
-          'relative rounded-xl border border-bolt-elements-borderColor/50',
-          'bg-bolt-elements-background-depth-2/50',
+          'relative rounded-[24px] border border-transparent',
+          'bg-bolt-elements-background-depth-2/40 backdrop-blur-md transition-all duration-300',
+          'focus-within:bg-bolt-elements-background-depth-1/80 focus-within:border-bolt-elements-borderColor/50',
         )}
       >
         <textarea
           ref={props.textareaRef}
           className={classNames(
-            'w-full pl-5 pt-5 pr-24 pb-4 outline-none resize-none rounded-xl',
+            'w-full pl-6 pt-4 pr-24 pb-4 outline-none resize-none rounded-[24px]',
             'text-bolt-elements-textPrimary placeholder:text-bolt-elements-textTertiary bg-transparent',
-            'text-[15px] sm:text-base leading-relaxed',
-            'transition-colors duration-150 ease-out',
+            'text-[15px] sm:text-[16px] leading-[1.6]',
+            'transition-all duration-300 ease-out',
           )}
           onDragEnter={(e) => {
             e.preventDefault();
@@ -222,6 +224,7 @@ const ChatBoxImpl: React.FC<ChatBoxProps> = (props) => {
             props.chatMode === 'build' ? 'How can futureHub help you today?' : 'What would you like to discuss?'
           }
           translate="no"
+          autoFocus={true}
         />
         <ClientOnly>
           {() => (
@@ -310,20 +313,27 @@ const ChatBoxImpl: React.FC<ChatBoxProps> = (props) => {
                 {props.chatMode === 'discuss' ? <span>Discuss</span> : <span />}
               </IconButton>
             )}
-            <IconButton
-              title="Model Settings"
-              className={classNames('transition-all flex items-center gap-1', {
-                'bg-bolt-elements-item-backgroundAccent text-bolt-elements-item-contentAccent':
-                  props.isModelSettingsCollapsed,
-                'bg-bolt-elements-item-backgroundDefault text-bolt-elements-item-contentDefault':
-                  !props.isModelSettingsCollapsed,
-              })}
+            <button
+              title="AI Model Routing"
+              className={classNames(
+                'transition-[background-color,shadow,transform] duration-200 ease-out flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border active:scale-95',
+                {
+                  'bg-accent-500/10 text-accent-500 border-accent-500/20 shadow-sm hover:bg-accent-500/20':
+                    props.isModelSettingsCollapsed,
+                  'bg-bolt-elements-item-backgroundDefault text-bolt-elements-item-contentDefault border-bolt-elements-borderColor hover:bg-bolt-elements-item-backgroundActive':
+                    !props.isModelSettingsCollapsed,
+                },
+              )}
               onClick={() => props.setIsModelSettingsCollapsed(!props.isModelSettingsCollapsed)}
-              disabled={!props.providerList || props.providerList.length === 0}
             >
-              <div className={`i-ph:caret-${props.isModelSettingsCollapsed ? 'right' : 'down'} text-lg`} />
-              {props.isModelSettingsCollapsed ? <span className="text-xs">{props.model}</span> : <span />}
-            </IconButton>
+              <div
+                className={classNames(
+                  props.isModelSettingsCollapsed ? 'i-ph:magic-wand-fill' : 'i-ph:sliders-horizontal',
+                  'text-sm',
+                )}
+              />
+              <span>{props.isModelSettingsCollapsed ? 'Auto (Smart)' : 'Manual Setup'}</span>
+            </button>
           </div>
           {props.input.length > 3 ? (
             <div className="text-xs text-bolt-elements-textTertiary">

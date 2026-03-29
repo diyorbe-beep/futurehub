@@ -331,13 +331,13 @@ export const Menu = () => {
         variants={menuVariants}
         style={{ width: '340px' }}
         className={classNames(
-          'flex selection-accent flex-col side-menu fixed top-0 h-full rounded-r-2xl',
-          'bg-white dark:bg-gray-950 border-r border-bolt-elements-borderColor',
-          'shadow-sm text-sm',
+          'flex selection-accent flex-col side-menu fixed top-0 h-full rounded-r-[32px]',
+          'bg-white dark:bg-bolt-elements-bg-depth-1 border-r border-bolt-elements-borderColor/30',
+          'shadow-[8px_0_48px_-12px_rgba(0,0,0,0.15)] text-[14px]',
           isSettingsOpen ? 'z-40' : 'z-sidebar',
         )}
       >
-        <div className="h-12 flex items-center justify-between px-4 border-b border-gray-100 dark:border-gray-800/50 bg-gray-50/50 dark:bg-gray-900/50 rounded-tr-2xl">
+        <div className="h-16 flex items-center justify-between px-6 border-b border-gray-100/50 dark:border-gray-800/30 bg-gray-50/30 dark:bg-gray-900/30 rounded-tr-[32px]">
           <div className="text-gray-900 dark:text-white font-medium"></div>
           <div className="flex items-center gap-3">
             <HelpButton onClick={() => window.open('https://stackblitz-labs.github.io/bolt.diy/', '_blank')} />
@@ -426,23 +426,24 @@ export const Menu = () => {
                   <div className="text-xs font-medium text-gray-500 dark:text-gray-400 sticky top-0 z-1 bg-white dark:bg-gray-950 px-4 py-1">
                     {category}
                   </div>
-                  <div className="space-y-0.5 pr-1">
-                    {items.map((item) => (
-                      <HistoryItem
-                        key={item.id}
-                        item={item}
-                        exportChat={exportChat}
-                        onDelete={(event) => {
-                          event.preventDefault();
-                          event.stopPropagation();
-                          console.log('Delete triggered for item:', item);
-                          setDialogContentWithLogging({ type: 'delete', item });
-                        }}
-                        onDuplicate={() => handleDuplicate(item.id)}
-                        selectionMode={selectionMode}
-                        isSelected={selectedItems.includes(item.id)}
-                        onToggleSelection={toggleItemSelection}
-                      />
+                  <div className="space-y-1 pr-1">
+                    {items.map((item, idx) => (
+                      <div className="animate-slide-up-fade" style={{ animationDelay: `${idx * 0.05}s` }} key={item.id}>
+                        <HistoryItem
+                          item={item}
+                          exportChat={exportChat}
+                          onDelete={(event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            console.log('Delete triggered for item:', item);
+                            setDialogContentWithLogging({ type: 'delete', item });
+                          }}
+                          onDuplicate={() => handleDuplicate(item.id)}
+                          selectionMode={selectionMode}
+                          isSelected={selectedItems.includes(item.id)}
+                          onToggleSelection={toggleItemSelection}
+                        />
+                      </div>
                     ))}
                   </div>
                 </div>

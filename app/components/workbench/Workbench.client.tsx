@@ -372,6 +372,39 @@ export const Workbench = memo(
       }
     }, []);
 
+    const handlePointerDown = useCallback((e: React.PointerEvent) => {
+      e.preventDefault();
+      document.body.style.cursor = 'col-resize';
+
+      const styleEl = document.createElement('style');
+      styleEl.id = 'resize-style';
+      styleEl.innerHTML = '* { transition: none !important; } iframe { pointer-events: none; }';
+      document.head.appendChild(styleEl);
+
+      const onPointerMove = (e: PointerEvent) => {
+        const newWidth = Math.max(300, Math.min(window.innerWidth - 300, window.innerWidth - e.clientX));
+        document.documentElement.style.setProperty('--workbench-width', `${newWidth}px`);
+      };
+
+      const onPointerUp = () => {
+        document.body.style.cursor = '';
+
+        const styleEl = document.getElementById('resize-style');
+
+        if (styleEl) {
+          styleEl.remove();
+        }
+
+        document.removeEventListener('pointermove', onPointerMove);
+        document.removeEventListener('pointerup', onPointerUp);
+
+        // Ensure state also reflects the new layout nicely if needed
+      };
+
+      document.addEventListener('pointermove', onPointerMove);
+      document.addEventListener('pointerup', onPointerUp);
+    }, []);
+
     return (
       chatStarted && (
         <motion.div
@@ -381,19 +414,21 @@ export const Workbench = memo(
           className="z-workbench"
         >
           <div
-            className={classNames(
-              'fixed top-[calc(var(--header-height)+1.2rem)] bottom-6 w-[var(--workbench-inner-width)] z-0 transition-[left,width] duration-200 bolt-ease-cubic-bezier',
-              {
-                'w-full': isSmallViewport,
-                'left-0': showWorkbench && isSmallViewport,
-                'left-[var(--workbench-left)]': showWorkbench,
-                'left-[100%]': !showWorkbench,
-              },
-            )}
+            className={classNames('relative h-full w-full z-10 transition-none', {
+              'fixed inset-0 z-50': isSmallViewport && showWorkbench,
+            })}
           >
-            <div className="absolute inset-0 px-2 lg:px-4">
-              <div className="h-full flex flex-col bg-bolt-elements-background-depth-2 border border-bolt-elements-borderColor shadow-sm rounded-lg overflow-hidden">
-                <div className="flex items-center px-3 py-2 border-b border-bolt-elements-borderColor gap-1.5">
+            <div className="absolute inset-0">
+              {!isSmallViewport && showWorkbench && (
+                <div
+                  className="absolute left-[-10px] top-0 bottom-0 w-[20px] cursor-col-resize z-50 flex items-center justify-center group"
+                  onPointerDown={handlePointerDown}
+                >
+                  <div className="w-[1px] h-full bg-transparent group-hover:bg-accent-500 transition-colors" />
+                </div>
+              )}
+              <div className="h-full flex flex-col bg-bolt-elements-background-depth-2 border-l border-bolt-elements-borderColor/30 overflow-hidden">
+                <div className="flex items-center px-4 py-3 border-b border-bolt-elements-borderColor/50 gap-2">
                   <button
                     className={`${showChat ? 'i-ph:sidebar-simple-fill' : 'i-ph:sidebar-simple'} text-lg text-bolt-elements-textSecondary mr-1`}
                     disabled={!canHideChat || isSmallViewport}
@@ -453,14 +488,14 @@ export const Workbench = memo(
                       </div>
 
                       {/* Toggle Terminal Button */}
-                      <div className="flex border border-bolt-elements-borderColor rounded-md overflow-hidden ml-1">
+                      <div className="flex border border-bolt-elements-borderColor/50 rounded-lg overflow-hidden ml-2 shadow-sm">
                         <button
                           onClick={() => {
                             workbenchStore.toggleTerminal(!workbenchStore.showTerminal.get());
                           }}
-                          className="rounded-md items-center justify-center [&:is(:disabled,.disabled)]:cursor-not-allowed [&:is(:disabled,.disabled)]:opacity-60 px-3 py-1.5 text-xs bg-accent-500 text-white hover:text-bolt-elements-item-contentAccent [&:not(:disabled,.disabled)]:hover:bg-bolt-elements-button-primary-backgroundHover outline-accent-500 flex gap-1.7"
+                          className="rounded-lg items-center justify-center [&:is(:disabled,.disabled)]:cursor-not-allowed [&:is(:disabled,.disabled)]:opacity-60 px-4 py-2 text-xs font-medium bg-accent-500 text-white transition-all hover:bg-accent-600 outline-none flex gap-2"
                         >
-                          <div className="i-ph:terminal" />
+                          <div className="i-ph:terminal text-sm" />
                           Toggle Terminal
                         </button>
                       </div>

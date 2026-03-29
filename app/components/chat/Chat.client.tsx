@@ -606,7 +606,7 @@ export const ChatImpl = memo(
           provider: provider.name,
         });
 
-        if (context === 'chat' && errorType !== 'authentication') {
+        if (context === 'chat') {
           const list = activeProvidersRef.current;
           const models = bootstrapModelListRef.current;
 
@@ -623,6 +623,7 @@ export const ChatImpl = memo(
               (errorType === 'network' ||
                 errorType === 'rate_limit' ||
                 errorType === 'quota' ||
+                errorType === 'authentication' ||
                 (errorType === 'unknown' && (errorInfo.statusCode >= 500 || errorInfo.statusCode === 0)));
 
             if (shouldRetryWithNext) {
@@ -1206,6 +1207,7 @@ export const ChatImpl = memo(
         setSelectedElement={setSelectedElement}
         addToolResult={addToolResult}
         onWebSearchResult={handleWebSearchResult}
+        reload={reload}
       />
     );
   },
