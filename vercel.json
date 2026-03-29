@@ -1,0 +1,18 @@
+{
+  "buildCommand": "pnpm run build",
+  "installCommand": "pnpm install",
+  "framework": "remix",
+  "crons": [],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "/",
+      "check": true
+    }
+  ],
+  "functions": {
+    "app/entry.server.tsx": {
+      "runtime": "edge"
+    }
+  }
+}

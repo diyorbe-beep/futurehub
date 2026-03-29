@@ -6,6 +6,8 @@ import { renderHeadToString } from 'remix-island';
 import { Head } from './root';
 import { themeStore } from '~/lib/stores/theme';
 
+export const runtime = 'edge';
+
 export default async function handleRequest(
   request: Request,
   responseStatusCode: number,
