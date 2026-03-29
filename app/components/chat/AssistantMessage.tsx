@@ -102,7 +102,7 @@ export const AssistantMessage = memo(
     return (
       <div className="overflow-hidden w-full">
         <>
-          <div className=" flex gap-2 items-center text-sm text-bolt-elements-textSecondary mb-2">
+          <div className="flex gap-2 items-center text-sm text-bolt-elements-textSecondary mb-2">
             {(codeContext || chatSummary) && (
               <Popover side="right" align="start" trigger={<div className="i-ph:info" />}>
                 {chatSummary && (
