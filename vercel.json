@@ -1,8 +1,8 @@
 {
-  "buildCommand": "pnpm run build",
-  "outputDirectory": "build/client",
-  "installCommand": "pnpm install",
-  "framework": "remix",
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "installCommand": "npm install",
+  "framework": null,
   "rewrites": [
     {
       "source": "/(.*)",
