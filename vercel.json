@@ -5,20 +5,8 @@
   "framework": "remix",
   "rewrites": [
     {
-      "source": "/api/(.*)",
-      "destination": "/api/$1"
-    },
-    {
-      "source": "/((?!api/).*)",
+      "source": "/(.*)",
       "destination": "/index.html"
     }
-  ],
-  "functions": {
-    "build/server/index.js": {
-      "runtime": "nodejs20.x"
-    }
-  },
-  "env": {
-    "NODE_VERSION": "20.x"
-  }
+  ]
 }
