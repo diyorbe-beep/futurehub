@@ -18,16 +18,13 @@ export default async function handleRequest(
   const isBot = isbot(request.headers.get('user-agent') || '');
   const head = renderHeadToString({ request, remixContext, Head });
 
-  const stream = await renderToReadableStream(
-    <RemixServer context={remixContext} url={request.url} />,
-    {
-      signal: request.signal,
-      onError(error: unknown) {
-        console.error(error);
-        responseStatusCode = 500;
-      },
-    }
-  );
+  const stream = await renderToReadableStream(<RemixServer context={remixContext} url={request.url} />, {
+    signal: request.signal,
+    onError(error: unknown) {
+      console.error(error);
+      responseStatusCode = 500;
+    },
+  });
 
   if (isBot) {
     await stream.allReady;
@@ -43,8 +40,8 @@ export default async function handleRequest(
 
       controller.enqueue(
         encoder.encode(
-          `<!DOCTYPE html><html lang="en" data-theme="${themeStore.value}"><head>${head}</head><body><div id="root" class="w-full h-full">`
-        )
+          `<!DOCTYPE html><html lang="en" data-theme="${themeStore.value}"><head>${head}</head><body><div id="root" class="w-full h-full">`,
+        ),
       );
 
       const reader = stream.getReader();
