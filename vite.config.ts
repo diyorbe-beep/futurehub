@@ -12,6 +12,8 @@ dotenv.config({ path: '.env' });
 dotenv.config();
 
 export default defineConfig((config) => {
+  const isVercel = process.env.VERCEL === '1';
+
   return {
     define: {
       'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV),
@@ -51,7 +53,7 @@ export default defineConfig((config) => {
           return null;
         },
       },
-      config.mode !== 'test' && !process.env.VERCEL && remixCloudflareDevProxy(),
+      !isVercel && config.mode !== 'test' && !process.env.VERCEL && remixCloudflareDevProxy(),
       remixVitePlugin({
         future: {
           v3_fetcherPersist: true,
