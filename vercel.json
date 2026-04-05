@@ -2,13 +2,22 @@
   "buildCommand": "pnpm run build",
   "outputDirectory": "build/client",
   "installCommand": "pnpm install",
-  "framework": null,
+  "framework": "remix",
   "rewrites": [
     {
-      "source": "/(.*)",
+      "source": "/api/(.*)",
+      "destination": "/api/$1"
+    },
+    {
+      "source": "/((?!api/).*)",
       "destination": "/index.html"
     }
   ],
+  "functions": {
+    "build/server/index.js": {
+      "runtime": "nodejs20.x"
+    }
+  },
   "env": {
     "NODE_VERSION": "20.x"
   }
